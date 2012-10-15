@@ -1,0 +1,280 @@
+#!/bin/bash
+
+#===============================================================
+# Module: ad_functions
+#===============================================================
+
+set -e
+set -u
+set -o pipefail
+
+#===============================================================
+# Global: SAM_GROUP_OBJECT
+# Description: Bitmask for Group object in AD
+#===============================================================
+SAM_GROUP_OBJECT=$((16#10000000))
+
+#===============================================================
+# Global: SAM_USER_OBJECT
+# Description: Bitmask for User object in AD
+#===============================================================
+SAM_USER_OBJECT=$((16#30000000))
+
+AD_ERRFILE="/tmp/`basename $0`.err"
+
+trap "on_exit EXIT" EXIT
+trap "on_exit INT" INT
+trap "on_exit TERM" TERM
+
+#===============================================================
+# Function: on_exit <signal>
+# Description: Prints additional information on exit
+#===============================================================
+on_exit()
+{
+    local signal=$1 excode=$? cmd arr msg
+
+    if [ "$signal" != "EXIT" ] || [ $excode -ne 0 ]; then
+        arr=( `caller 0` )
+        msg="signal: $signal exit code: $excode function: ${arr[1]} line: ${arr[0]} file: ${arr[2]}"
+        echo $msg 1>&2
+        echo "EXIT: $msg" | logger -i -p local0.info -t `basename $0`
+    fi
+}
+
+#===============================================================
+# Function: error <message>
+# Description: Prints error message and exits
+#===============================================================
+error()
+{
+    if [ -f $AD_ERRFILE ]; then
+        cat $AD_ERRFILE >&2
+        rm -f $AD_ERRFILE
+    fi
+
+    echo "ERROR: $1" | logger -i -p local0.error -t `basename $0`
+    echo "$1" >&2
+    exit 1
+}
+
+#===============================================================
+# Function: check_kerberos
+# Description: Check that user has a Kerberos ticket
+#===============================================================
+check_kerberos()
+{
+    if ! klist -s &>/dev/null; then
+        error 'You need a Kerberos ticket to run this script, you can get a ticket by running "kinit"'
+    fi
+}
+
+#===============================================================
+# Function: get_entry
+# Description: Get entry unless a default is set
+#===============================================================
+get_entry()
+{
+    local text="$1" default="$2"
+
+    if [ "$default" != 'none' ]; then
+        echo -n $default
+        return 0
+    fi
+
+    echo -n "$text: " >&2
+    read value
+
+    echo -n $value
+    return 0
+}
+
+#===============================================================
+# Function: get_password <text> <defaults>
+# Description: Get password unless a default is set
+#===============================================================
+get_password()
+{
+    local text="$1" default="$2"
+
+    if [ $default != 'none' ]; then
+        echo -n $default
+        return 0
+    fi
+
+    echo -n "$text: " >&2
+    read -s value
+    echo >&2
+
+    echo -n $value
+    return 0
+}
+
+#===============================================================
+# Function: get_item <text> <defaults>
+# Description: Get item from list unless a default is set
+#===============================================================
+get_item()
+{
+    local text="$1" default="$2" list choice
+    shift
+    shift
+    list=( "$@" )
+
+    if [ $default != 'none' ]; then
+        for count in ${!list[*]}; do
+            if [ ${list[$count]} = $default ]; then
+                echo -n $count
+                return 0
+            fi
+        done
+        error "$text $default doesn't exist"
+    fi
+
+    PS3="$text: "
+    select choice in ${list[*]}; do
+        if [ -z "$choice" ]; then
+            echo "Illegal selection" >&2
+        else
+            break
+        fi
+    done
+    echo >&2
+
+    let "REPLY = $REPLY - 1"
+    echo -n "$REPLY"
+    return 0
+}
+
+#===============================================================
+# Function: ldap_query <base> <scope=one|sub> <filter> <attr>
+# Description: Query LDAP server
+#===============================================================
+ldap_query()
+{
+    local base="$1" scope="$2" filter="$3" attr="$4"
+
+    if ! $LDAP_HOME/bin/ldapsearch -LLL -h "$LDAP_HOST" -b "$base" -s "$scope" "$filter" $attr 2>$AD_ERRFILE | \
+        tr '\n' ';' | sed 's/; //g' | tr ';' '\n'; then
+        error "LDAP query failed"
+    fi
+    rm -f $AD_ERRFILE
+
+    return 0
+}
+
+#===============================================================
+# Function: host_zone <host>
+# Description: Get host zone
+#===============================================================
+host_zone()
+{
+    local host="$1" zone
+
+    if ! zone=`ldap_query "$LDAP_ZONE_BASE" "sub" "(CN=$host)" "dn" | grep dn | \
+        sed -e 's/.*CN=Computers,CN=//' -e 's/,.*//'`; then
+        error "Host \"$host\" doesn't exist"
+    fi
+
+    echo $zone
+    return 0
+}
+
+#===============================================================
+# Function: group_tree <group>
+# Description: Tree view of group
+#===============================================================
+group_tree()
+{
+    local group="$1" dn
+
+    if ! dn=`ldap_query "$LDAP_BASE" "sub" "(&(objectClass=group)(CN=$group))" "dn" | grep dn | sed 's/dn: //'`; then
+        error "Group \"$group\" doesn't exist"
+    fi
+
+    echo "Group: $group"
+    ad_priv_group_tree "" "$LDAP_BASE" "(memberOf=$dn)"
+}
+
+#===============================================================
+# Function: host_role_tree <host>
+# Description: Tree view of host roles
+#===============================================================
+host_role_tree() {
+    local host="$1" link az_dn
+
+    link=`ldap_query "$LDAP_BASE" "sub" "(CN=$host)" "keywords" | grep parentLink | sed 's/keywords: parentLink://'`
+    az_dn=`ldap_query "$LDAP_ZONE_BASE" "sub" "(&(objectClass=msDS-AzScope)(msDS-AzScopeName=$link))" "dn" | \
+        grep dn | sed 's/dn: //'`
+
+    priv_role_tree "$az_dn"
+}
+
+#===============================================================
+# Function: zone_role_tree <zone>
+# Description: Tree view of zone roles
+#===============================================================
+zone_role_tree() {
+    local zone="$1" base az_dn
+
+    base="CN=Authorization,CN=$zone,$LDAP_ZONE_BASE"
+    zone_cn=`ldap_query "$base" "sub" "objectClass=msDS-AzApplication" "cn" | grep cn: | sed 's/cn: //'`
+
+    az_dn="CN=AzRoleObjectContainer-$zone_cn,CN=$zone_cn,CN=Authorization,CN=$zone,$LDAP_ZONE_BASE"
+
+    priv_role_tree "$az_dn"
+}
+
+#===============================================================
+ad_priv_group_tree() {
+    local pad="$1" base="$2" filter="$3" dn var val dn cn name type
+
+    while read line; do
+        var="${line%%:*}"
+        val="${line#*: }"
+
+        case "$var" in
+            dn)
+                dn="$val"
+                ;;
+            cn)
+                cn="$val"
+                ;;
+            sAMAccountName)
+                name="$val"
+                ;;
+            sAMAccountType)
+                type="$val"
+                if [ "$type" -eq "$SAM_USER_OBJECT" ]; then
+                    printf "$pad\`-- User: $name ($cn)\n"
+                elif [ "$type" -eq "$SAM_GROUP_OBJECT" ]; then
+                    printf "$pad|-- Group: $name\n"
+                    ad_priv_group_tree "$pad|   " "$LDAP_BASE" "(memberOf=$dn)"
+                fi
+                ;;
+        esac
+    done < <( ldap_query "$base" "sub" "$filter" "dn cn sAMAccountName sAMAccountType" )
+}
+
+#===============================================================
+priv_role_tree() {
+    local az_dn="$1" prole var val dn role
+
+    prole="none"
+    while read line; do
+        var="${line%%:*}"
+        val="${line#*: }"
+
+        case "$var" in
+            msDS-MembersForAzRole)
+                dn="$val"
+                ;;
+            msDS-TasksForAzRole)
+                role=`echo $val | sed -e 's/CN=role-//' -e 's/,.*//'`
+                [ $role != $prole ] && printf "\nRole: $role\n"
+                prole="$role"
+                ad_priv_group_tree "" "$dn" ""
+                ;;
+        esac
+    done < <( ldap_query "$az_dn" "sub" "(objectClass=msDS-AzRole)" "msDS-MembersForAzRole msDS-TasksForAzRole" )
+}

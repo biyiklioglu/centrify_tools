@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#===============================================================
+# Script: ad_zones
+# Syntax: ad_zones [-h]
+# Description: List all Centrify zones
+# Option: -h, --help|Display help
+#===============================================================
+
+set -e
+set -u
+set -o pipefail
+
+source /etc/ad.conf
+source /usr/lib/ad_functions
+
+help() {
+    echo "Usage: `basename $0` [-h|--help]"
+    exit 0
+}
+
+[ $# -ne 0 ] && [ "$1" = "-h" -o "$1" = "--help" ] && help
+check_kerberos
+
+ldap_query "$LDAP_ZONE_BASE" "one" "" "cn" | grep cn: | sed 's/cn: //'

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#===============================================================
+# Script: ad_zone_hosts
+# Syntax: ad_zone_hosts <zone> [-h]
+# Description: List all hosts in a Centrify zone
+# Option: zone|Zone
+# Option: -h, --help|Display help
+#===============================================================
+
+set -e
+set -u
+set -o pipefail
+
+source /etc/ad.conf
+source /usr/lib/ad_functions
+
+help() {
+    echo "Usage: `basename $0` [-h|--help] <zone>"
+    exit 0
+}
+
+[ $# -eq 0 ] && help
+[ "$1" = "-h" -o "$1" = "--help" ] && help
+check_kerberos
+ldap_query "CN=Computers,CN=$1,$LDAP_ZONE_BASE" "one" "" "cn" | grep cn: | sed -e 's/cn: //'

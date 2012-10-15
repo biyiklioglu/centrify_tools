@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#===============================================================
+# Script: ad_client_roles
+# Syntax: ad_client_roles <hostname> [-h]
+# Description: Tree view of client Centrify role members
+# Option: hostname|Hostname
+# Option: -h, --help|Display help
+#===============================================================
+
+set -e
+set -u
+set -o pipefail
+
+source /etc/ad.conf
+source /usr/lib/ad_functions
+
+help() {
+    echo "Usage: `basename $0` [-h|--help] <hostname>"
+    exit 0
+}
+
+[ $# -eq 0 ] && help
+[ "$1" = "-h" -o "$1" = "--help" ] && help
+check_kerberos
+
+HOST="$1"
+[[ "$HOST" =~ "$DOMAIN" ]] || HOST="$HOST.$DOMAIN"
+host_role_tree "$HOST"
