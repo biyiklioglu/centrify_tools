@@ -1,10 +1,10 @@
 #Centrify Tools#
-Tools for listing permissions and getting information for Centrify on the command line
+Tools for listing permissions and getting information from Centrify on the command line
 
 ##AD Group##
 
 ###Description###
-Will list an AD Security Group using a Tree structure
+Will list an AD Security Group using a tree structure
 
 ###Usage###
 ad_group [-h|--help] <ad group>
@@ -25,7 +25,7 @@ Group: admins
 ##AD Host Roles##
 
 ###Description###
-Will list users assigned to role''s on a host
+Will list users assigned to role's on a host
 
 ###Usage###
 ad_host_roles [-h|--help] <hostname>
@@ -43,7 +43,7 @@ Role: ts_admins
 ##AD Host Zone##
 
 ###Description###
-Will print host''s zone
+Will print host's zone
 
 ###Usage###
 ad_host_roles [-h|--help] <hostname>
@@ -75,7 +75,7 @@ imapserver.mydomain
 ##AD Zone Roles##
 
 ###Description###
-Will list users assigned to role''s in a Zone
+Will list users assigned to role's in a zone
 
 ###Usage###
 ad_zone_roles [-h|--help] <hostname>
