@@ -1,4 +1,5 @@
 #Centrify Tools#
+Tools for listing permissions and getting information for Centrify on the command line
 
 ##AD Group##
 
@@ -19,7 +20,6 @@ Group: admins
 |   `-- User: bsimon (Burt Simon)
 |   `-- User: landerss (Lars Andersson)
 `-- User: cbaker (Carl Baker)
-...
 </pre>
 
 ##AD Host Roles##
@@ -32,13 +32,12 @@ ad_host_roles [-h|--help] <hostname>
 
 ###Example###
 <pre>
-# ad_host_roles myserver
+$ ad_host_roles myserver
 
 Role: ts_admins
 |-- Group: devs
 |   `-- User: bsimon (Burt Simon)
 |   `-- User: landerss (Lars Andersson)
-...
 </pre>
 
 ##AD Host Zone##
@@ -71,7 +70,6 @@ $ ad_hosts myzone
 webserver.mydomain
 smtpserver.mydomain
 imapserver.mydomain
-...
 </pre>
 
 ##AD Zone Roles##
@@ -94,7 +92,6 @@ Role: login
 Role: admins
 |-- Group: admins
 |   `-- User: lsimpsons (Lisa Simpsons)
-...
 </pre>
 
 ##AD Zones##
@@ -112,4 +109,4 @@ $ ad_zones
 dev
 qa
 prod
-<pre>
+</pre>
