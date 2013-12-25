@@ -17,12 +17,12 @@ rpm:
 	rsync -a --exclude \.svn etc/* ${TMPDIR}/SOURCES/
 	rsync -a --exclude \.svn src/* ${TMPDIR}/SOURCES/
 	rpmbuild -vv -bb --target="noarch" --clean --define "_topdir ${TMPDIR}" ${TMPDIR}/${NAME}.spec
-	find ${TMPDIR}/RPMS/ -type f -name '*.rpm' -print0 | xargs -0 -I {} mv {} ./
+	find ${TMPDIR}/RPMS/ -type f -name '*.rpm' -print0 | xargs -0 -I {} mv {} ./rpms
 
 pkg:
 	mkdir -p ${TMPDIR}/usr/{bin,lib}
-	mkdir -p ${TMPDIR}/private/etc
-	cp etc/ad.conf ${TMPDIR}/private/etc
+	mkdir -p ${TMPDIR}/private/etc/centrify_tools
+	cp etc/centrify_tools/default.conf ${TMPDIR}/private/etc/centrify_tools
 	cp src/ad_functions ${TMPDIR}/usr/lib
 	cp src/ad_group ${TMPDIR}/usr/bin
 	cp src/ad_host_roles ${TMPDIR}/usr/bin

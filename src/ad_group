@@ -12,7 +12,14 @@ set -e
 set -u
 set -o pipefail
 
-source /etc/ad.conf
+CENTRIFY_TOOLS_CONF=${CENTRIFY_TOOLS_CONF:=default}
+
+if [ ! -f /etc/centrify_tools/${CENTRIFY_TOOLS_CONF}.conf ]
+then
+	echo "AD Config file : /etc/centrify_tools/${CENTRIFY_TOOLS_CONF}.conf is not found"
+	exit 1
+fi
+source /etc/centrify_tools/${CENTRIFY_TOOLS_CONF}.conf
 source /usr/lib/ad_functions
 
 help() {

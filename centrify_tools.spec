@@ -2,7 +2,7 @@
 %define version %VERSION%
 %define release %RELEASE%
 %define arch noarch
-%define source https://github.com/mickep76/centrify_tools.git
+%define source https://github.com/biyiklioglu/centrify_tools.git
 
 %define buildroot %{_topdir}/BUILDROOT/
 
@@ -22,7 +22,7 @@ Tools for listing permissions and getting information for Centrify on the comman
 %prep
 mkdir -p %{buildroot}/usr/bin
 mkdir %{buildroot}/usr/lib
-mkdir %{buildroot}/etc
+mkdir -p %{buildroot}/etc/centrify_tools
 cp %{_topdir}/SOURCES/ad_group %{buildroot}/usr/bin
 cp %{_topdir}/SOURCES/ad_host_roles %{buildroot}/usr/bin
 cp %{_topdir}/SOURCES/ad_host_zone %{buildroot}/usr/bin
@@ -30,7 +30,7 @@ cp %{_topdir}/SOURCES/ad_zone_hosts %{buildroot}/usr/bin
 cp %{_topdir}/SOURCES/ad_zone_roles %{buildroot}/usr/bin
 cp %{_topdir}/SOURCES/ad_zones %{buildroot}/usr/bin
 cp %{_topdir}/SOURCES/ad_functions %{buildroot}/usr/lib
-cp %{_topdir}/SOURCES/ad.conf %{buildroot}/etc
+cp %{_topdir}/SOURCES/centrify_tools/default.conf %{buildroot}/etc/centrify_tools
 
 %files
 %defattr(-,root,root)
@@ -38,4 +38,9 @@ cp %{_topdir}/SOURCES/ad.conf %{buildroot}/etc
 %dir /usr/lib
 /usr/bin/*
 /usr/lib/*
-%config(noreplace) /etc/ad.conf
+%config(noreplace) /etc/centrify_tools/default.conf
+
+%changelog
+* Wed Dec 25 2013 Orhan Biyiklioglu <biyiklioglu@gmail.com> - 1.3.0
+- Added the multiple config file option
+- Updated to release 1.3.0
