@@ -34,8 +34,6 @@ cp %{_topdir}/SOURCES/centrify_tools/default.conf %{buildroot}/etc/centrify_tool
 
 %files
 %defattr(-,root,root)
-%dir /usr/bin
-%dir /usr/lib
 /usr/bin/*
 /usr/lib/*
 %config(noreplace) /etc/centrify_tools/default.conf
